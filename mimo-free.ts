@@ -85,7 +85,10 @@ async function bootstrap(): Promise<string> {
   const fingerprint = getClientFingerprint();
   const res = await fetch(BOOTSTRAP_URL, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: {
+      "Content-Type": "application/json",
+      "User-Agent": "mimocode/0.1.0",
+    },
     body: JSON.stringify({ client: fingerprint }),
   });
   if (!res.ok) {
@@ -124,12 +127,25 @@ async function getJwt(): Promise<string> {
   }
 }
 
-// ─── URL Rewrite ─────────────────────────────────────────────────────
+function injectPrompt(init: any) {
+  const bodyParsed = JSON.parse(init.body);
+  // https://github.com/XiaomiMiMo/MiMo-Code/blob/42e7da3d51dba1129cd3abfa214e29f7385924a3/packages/opencode/src/session/prompt/default.txt
+  // if without this prompt, request will be 403, Illegal access!
+  const xiaomiDefaultPrompt = `You are MiMoCode, an interactive CLI tool that helps users with software engineering tasks.`;
+  bodyParsed.messages[0].content =
+    xiaomiDefaultPrompt + bodyParsed.messages[0].content;
+  init.body = JSON.stringify(bodyParsed);
+}
 
+// ─── URL Rewrite ─────────────────────────────────────────────────────
 function buildHeaders(init: any, jwt: string): Headers {
   const headers = new Headers(init?.headers);
   headers.set("Authorization", `Bearer ${jwt}`);
   headers.set("X-Mimo-Source", "mimocode-cli-free");
+  headers.set(
+    "User-Agent",
+    "mimocode/0.1.0 ai-sdk/provider-utils/4.0.23 runtime/bun/1.3.14",
+  );
   return headers;
 }
 
@@ -149,7 +165,7 @@ const wrappedFetch: typeof fetch = async (input, init) => {
 
   const jwt = await getJwt();
   const headers = buildHeaders(init, jwt);
-
+  injectPrompt(init);
   const response = await fetch(rewritten, { ...init, headers });
 
   if (response.status !== 401 && response.status !== 403) return response;

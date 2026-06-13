@@ -12,6 +12,10 @@
 
 与 MiMoCode 原版一致：启动时 bootstrap 获取 JWT，`config` hook 注册 provider 并注入 `wrappedFetch` 处理认证和 URL rewrite，JWT 过期自动刷新。
 
+### 关键处理
+
+- **默认 Prompt 注入**：在请求 body 的第一个 message 前自动添加 MiMo 默认系统提示词（`You are MiMoCode, an interactive CLI tool that helps users with software engineering tasks.`），否则服务端会返回 403 Illegal access!
+
 ## 使用
 
 ```bash
